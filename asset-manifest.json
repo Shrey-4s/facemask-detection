@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/facemask-detection/static/css/main.ca67ef22.css",
-    "main.js": "/facemask-detection/static/js/main.d17470a3.js",
+    "main.css": "/facemask-detection/static/css/main.e6c13ad2.css",
+    "main.js": "/facemask-detection/static/js/main.e94549fe.js",
     "index.html": "/facemask-detection/index.html",
-    "main.ca67ef22.css.map": "/facemask-detection/static/css/main.ca67ef22.css.map",
-    "main.d17470a3.js.map": "/facemask-detection/static/js/main.d17470a3.js.map"
+    "main.e6c13ad2.css.map": "/facemask-detection/static/css/main.e6c13ad2.css.map",
+    "main.e94549fe.js.map": "/facemask-detection/static/js/main.e94549fe.js.map"
   },
   "entrypoints": [
-    "static/css/main.ca67ef22.css",
-    "static/js/main.d17470a3.js"
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.e94549fe.js"
   ]
 }
