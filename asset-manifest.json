@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/facemask-detection/static/css/main.e6c13ad2.css",
+    "main.js": "/facemask-detection/static/js/main.3c810e0a.js",
+    "index.html": "/facemask-detection/index.html",
+    "main.e6c13ad2.css.map": "/facemask-detection/static/css/main.e6c13ad2.css.map",
+    "main.3c810e0a.js.map": "/facemask-detection/static/js/main.3c810e0a.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.3c810e0a.js"
+  ]
+}
