@@ -1,36 +1,55 @@
+import os
 from flask import Flask, request, jsonify
-import base64
-from io import BytesIO
+from tensorflow.keras.models import load_model
 from PIL import Image
-from flask_cors import CORS
+import numpy as np
+from flask_cors import CORS  # Add this import
 
 app = Flask(__name__)
-CORS(app)  # Allow requests from all origins (modify if needed)
+CORS(app)  # Enable CORS for all routes
+
+# Load the model
+MODEL_PATH = "MaskDetectionModel.h5"
+model = load_model(MODEL_PATH)
+
+# Define image upload folder
+UPLOAD_FOLDER = 'uploads/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 
 @app.route('/detect', methods=['POST'])
 def detect_mask():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image part"}), 400
+
+    file = request.files['image']
+
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
     try:
-        data = request.get_json()
+        # Save the image to a temporary folder
+        img_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(img_path)
 
-        if not data or "image" not in data:
-            return jsonify({"error": "Invalid JSON or missing 'image' key"}), 400
+        # Load and process the image
+        img = Image.open(img_path)
+        img = img.resize((224, 224))  # Resize to the model's expected input size
+        img = np.array(img) / 255.0  # Normalize
+        img = np.expand_dims(img, axis=0)
 
-        # Extract Base64 string and remove metadata if present
-        base64_string = data["image"]
-        if "," in base64_string:
-            base64_string = base64_string.split(",")[1]
-
-        # Decode Base64 image
-        image_data = base64.b64decode(base64_string)
-        image = Image.open(BytesIO(image_data))
-
-        # Perform model prediction (Replace this with your actual model code)
-        prediction = "Mask"  # Placeholder for actual prediction logic
-
-        return jsonify({"prediction": prediction})
+        # Predict with the model
+        prediction = model.predict(img)
+        os.remove(img_path)
+        
+        if prediction[0][0] > prediction[0][1]:
+            return jsonify({"mask": "No Mask Detected"}), 200
+        else:
+            return jsonify({"mask": "Mask Detected"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)  # Change host if deploying on a server
+    app.run(debug=True)
