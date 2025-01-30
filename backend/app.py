@@ -1,55 +1,61 @@
-import os
 from flask import Flask, request, jsonify
-from tensorflow.keras.models import load_model
-from PIL import Image
+import cv2
 import numpy as np
-from flask_cors import CORS  # Add this import
+from tensorflow.keras.models import load_model
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# Load the model
-MODEL_PATH = "MaskDetectionModel.h5"
-model = load_model(MODEL_PATH)
+model = load_model("MaskDetectionModel.h5", compile=False)
+face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
+rect_size = 4
+labels = {0: 'without mask', 1: 'mask'}
+colors = {0: (0, 0, 255), 1: (0, 255, 0)}
 
-# Define image upload folder
-UPLOAD_FOLDER = 'uploads/'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+def process_image(img):
+    resized = cv2.resize(img, (img.shape[1] // rect_size, img.shape[0] // rect_size))
+    gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    
+    results = []
+    for (x, y, w, h) in faces:
+        x, y, w, h = [v * rect_size for v in (x, y, w, h)]
+        face_img = img[y:y+h, x:x+w]
+        resized_face = cv2.resize(face_img, (150, 150))
+        normalized = resized_face / 255.0
+        prediction = model.predict(normalized.reshape(1, 150, 150, 3))
+        label = np.argmax(prediction)
+        
+        results.append({
+            "x": int(x),
+            "y": int(y),
+            "width": int(w),
+            "height": int(h),
+            "label": labels[label],
+            "confidence": float(prediction[0][label])
+        })
+    return results
 
 @app.route('/detect', methods=['POST'])
-def detect_mask():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image part"}), 400
-
-    file = request.files['image']
-
+def detect():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+        
+    file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # Save the image to a temporary folder
-        img_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(img_path)
-
-        # Load and process the image
-        img = Image.open(img_path)
-        img = img.resize((224, 224))  # Resize to the model's expected input size
-        img = np.array(img) / 255.0  # Normalize
-        img = np.expand_dims(img, axis=0)
-
-        # Predict with the model
-        prediction = model.predict(img)
-        os.remove(img_path)
+        # Read the file into a numpy array
+        npimg = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
         
-        if prediction[0][0] > prediction[0][1]:
-            return jsonify({"mask": "No Mask Detected"}), 200
-        else:
-            return jsonify({"mask": "Mask Detected"}), 200
-
+        # Process the image
+        results = process_image(img)
+        return jsonify({"results": results})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
