@@ -1,47 +1,36 @@
-from tensorflow.keras.models import load_model
-import numpy as np
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask import Flask, request, jsonify
 import base64
 from io import BytesIO
 from PIL import Image
-import cv2
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
-
-# Load the trained model (make sure to place the model file in your project directory)
-model = load_model("MaskDetectionModel.h5")
+CORS(app)  # Allow requests from all origins (modify if needed)
 
 @app.route('/detect', methods=['POST'])
-def detect():
+def detect_mask():
     try:
-        # Extract the base64 image data from the request
         data = request.get_json()
-        image_data = data['image']
 
-        # Decode the base64 image data
-        img_bytes = base64.b64decode(image_data)
-        img = Image.open(BytesIO(img_bytes))
-        
-        # Convert the image to a format suitable for prediction (resize and convert to numpy array)
-        img = img.resize((224, 224))  # Resize to match input size of the model
-        img = np.array(img)  # Convert to numpy array
-        img = img / 255.0  # Normalize if necessary
-        
-        # If the model requires a batch dimension (e.g., if it's a CNN), add it
-        img = np.expand_dims(img, axis=0)
+        if not data or "image" not in data:
+            return jsonify({"error": "Invalid JSON or missing 'image' key"}), 400
 
-        # Perform prediction with your model
-        prediction = model.predict(img)
+        # Extract Base64 string and remove metadata if present
+        base64_string = data["image"]
+        if "," in base64_string:
+            base64_string = base64_string.split(",")[1]
 
-        # Return the prediction result (e.g., 0: No mask, 1: Mask detected)
-        result = "Mask" if prediction[0][0] > 0.5 else "No Mask"
+        # Decode Base64 image
+        image_data = base64.b64decode(base64_string)
+        image = Image.open(BytesIO(image_data))
 
-        return jsonify({"prediction": result})
+        # Perform model prediction (Replace this with your actual model code)
+        prediction = "Mask"  # Placeholder for actual prediction logic
+
+        return jsonify({"prediction": prediction})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)  # Change host if deploying on a server
