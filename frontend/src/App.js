@@ -11,24 +11,19 @@ function App() {
 
   // Capture the image from webcam
   const captureImage = async () => {
-    setLoading(true);
-    setError(null);
     const imageSrc = webcamRef.current.getScreenshot();
-    const base64Image = imageSrc.split(",")[1];
-
+    const base64Image = imageSrc.split(",")[1];  // Remove the 'data:image/png;base64,' prefix
+  
     try {
       const response = await axios.post("http://127.0.0.1:5000/detect", {
-        image: base64Image,
+        image: base64Image
       });
-
-      setResult(response.data.prediction);
-      setLoading(false);
+      setResult(response.data.prediction);  // Update the result state
     } catch (error) {
-      setError("Error detecting mask. Please try again.");
-      setLoading(false);
       console.error("Error detecting mask", error);
     }
   };
+  
 
   return (
     <div className="container text-center mt-5">
